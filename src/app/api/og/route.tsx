@@ -132,6 +132,10 @@ export async function GET(req: Request) {
     fonts: [{ name: "Gaegu", data: font(), weight: 700 as const, style: "normal" as const }],
   };
 
+  const cacheHeaders = {
+    "Cache-Control": "public, immutable, no-transform, max-age=31536000",
+  };
+
   // Generic cover when there is no (valid) result in the URL
   if (!share) {
     return new ImageResponse(
@@ -157,7 +161,10 @@ export async function GET(req: Request) {
           </div>
         </Page>
       ),
-      options,
+      {
+        ...options,
+        headers: cacheHeaders,
+      },
     );
   }
 
@@ -279,6 +286,9 @@ export async function GET(req: Request) {
         </div>
       </Page>
     ),
-    options,
+    {
+      ...options,
+      headers: cacheHeaders,
+    },
   );
 }
