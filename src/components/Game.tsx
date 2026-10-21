@@ -7,7 +7,7 @@ import { logEvent } from "@/lib/analytics";
 import { t, type Lang } from "@/lib/i18n";
 import { pencilAt } from "@/lib/pencils";
 import { buildQuery, MAX_NAME_LENGTH, type SharePayload } from "@/lib/share";
-import { playFlip, playScratch, playTing } from "@/lib/sound";
+import { playCircleScratch, playFlip, playScratch, playTing, unlockAudio } from "@/lib/sound";
 import Doodles from "./Doodles";
 import ScoreBadge from "./ScoreBadge";
 import ShareBar from "./ShareBar";
@@ -88,7 +88,10 @@ export default function Game({ initial }: { initial: Initial }) {
     setDone(false);
     setRunId((n) => n + 1);
     setView("working");
-    if (sound) playFlip();
+    if (sound) {
+      unlockAudio(); // inside the tap, so iOS lets the timed sounds play
+      playFlip();
+    }
     logEvent("calculate", { lang });
     const q = buildQuery({ a, b, hide, lang, score: r.score });
     window.history.replaceState(null, "", `/?${q.toString()}`);
@@ -119,6 +122,10 @@ export default function Game({ initial }: { initial: Initial }) {
           <button
             type="button"
             onClick={() => {
+              if (!sound) {
+                unlockAudio();
+                playScratch(220); // audible confirmation that sound is now on
+              }
               setSound((s) => !s);
             }}
             aria-pressed={sound}
@@ -160,8 +167,6 @@ export default function Game({ initial }: { initial: Initial }) {
           <motion.form
             onSubmit={submit}
             noValidate
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
             className="wobbly border-[3px] border-pencil-blue/40 bg-white/60 p-6 backdrop-blur-[1px]"
           >
             <label className="block">
@@ -240,11 +245,16 @@ export default function Game({ initial }: { initial: Initial }) {
               key={runId}
               result={result}
               lang={lang}
-              onStep={sound ? playScratch : undefined}
-              onDone={() => {
-                setDone(true);
-                if (sound) playTing();
-              }}
+              onSound={
+                sound
+                  ? (kind, ms) => {
+                      if (kind === "ting") playTing();
+                      else if (kind === "circle") playCircleScratch(ms);
+                      else playScratch(ms);
+                    }
+                  : undefined
+              }
+              onDone={() => setDone(true)}
             />
 
             {done && (
